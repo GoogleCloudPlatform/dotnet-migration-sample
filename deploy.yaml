@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: contosouniversity
+  name: contosouniversity
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: contosouniversity
+  template:
+    metadata:
+      labels:
+        app: contosouniversity
+    spec:
+      containers:
+      - image: gcr.io/${PROJECT}/contosouniversity-windows:v1_ltsc2019
+        imagePullPolicy: IfNotPresent
+        name: contosouniversity-container
+        volumeMounts: 
+        - name: connection-strings
+          mountPath: "/inetpub/wwwroot/secret"
+          readOnly: true        
+        ports:
+        - containerPort: 80
+          protocol: TCP
+      nodeSelector:
+        kubernetes.io/os: windows
+      volumes:
+      - name: connection-strings
+        secret:
+          secretName: connection-strings
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: contosouniversity-service
+spec:
+  selector:
+    app: contosouniversity
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: LoadBalancer
