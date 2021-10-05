@@ -15,7 +15,7 @@ spec:
         app: contosouniversity
     spec:
       containers:
-      - image: gcr.io/${PROJECT}/contosouniversity-windows:v1_ltsc2019
+      - image: gcr.io/${PROJECT}/contosouniversity-windows:v1
         imagePullPolicy: IfNotPresent
         name: contosouniversity-container
         volumeMounts: 

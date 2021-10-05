@@ -1,0 +1,8 @@
+timeout: 3600s
+steps:
+- name: 'gcr.io/gke-release/gke-windows-builder:release-2.6.1-gke.0'
+  args:
+  - --versions
+  - 'ltsc2019'
+  - --container-image-name
+  - 'gcr.io/$PROJECT_ID/contosouniversity-windows:v1'
