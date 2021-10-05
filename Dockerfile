@@ -2,7 +2,8 @@
 
 FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2019 AS build
 WORKDIR /source
-COPY . /source
+COPY ContosoUniversity.sln /source
+COPY ContosoUniversity /source/ContosoUniversity
 
 RUN msbuild ContosoUniversity.sln /t:restore /p:RestorePackagesConfig=true
 RUN msbuild /p:Configuration=Release `
