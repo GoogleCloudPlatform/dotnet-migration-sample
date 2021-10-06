@@ -1,0 +1,32 @@
+#
+# Execute cloud build: gcloud builds submit  
+# see: https://cloud.google.com/build/docs/configuring-builds/substitute-variable-values
+#
+
+steps:
+# Build the container image
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', 'gcr.io/$PROJECT_ID/contosouniversity:$BUILD_ID', '.']
+# Push the container image to Container Registry
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'gcr.io/$PROJECT_ID/contosouniversity:$BUILD_ID']
+# Deploy container image to Cloud Run
+- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+  entrypoint: gcloud
+  args: 
+  - 'beta'
+  - 'run'
+  - 'deploy'
+  - 'contosouniversity'
+  - '--image'
+  - 'gcr.io/$PROJECT_ID/contosouniversity:$BUILD_ID'
+  - '--region'
+  - 'us-central1'
+  - '--platform'
+  - 'managed'
+  - '--allow-unauthenticated'
+  - '--update-secrets=/app/secrets/appsettings.json=connectionstrings:latest'
+  - '--vpc-connector'
+  - 'contoso-university'
+images:
+- gcr.io/$PROJECT_ID/contosouniversity:$BUILD_ID

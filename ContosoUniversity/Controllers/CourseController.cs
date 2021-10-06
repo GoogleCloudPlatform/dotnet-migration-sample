@@ -4,17 +4,23 @@ using System.Data;
 using System.Data.Entity;
 using System.Linq;
 using System.Net;
-using System.Web;
-using System.Web.Mvc;
 using ContosoUniversity.DAL;
 using ContosoUniversity.Models;
 using System.Data.Entity.Infrastructure;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using System.Threading.Tasks;
 
 namespace ContosoUniversity.Controllers
 {
     public class CourseController : Controller
     {
-        private SchoolContext db = new SchoolContext();
+        private SchoolContext db = null;
+
+        public CourseController(SchoolContext db)
+        {
+            this.db = db;
+        }
 
         // GET: Course
         public ActionResult Index(int? SelectedDepartment)
@@ -36,12 +42,12 @@ namespace ContosoUniversity.Controllers
         {
             if (id == null)
             {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+                return new BadRequestResult();
             }
             Course course = db.Courses.Find(id);
             if (course == null)
             {
-                return HttpNotFound();
+                return new NotFoundResult();
             }
             return View(course);
         }
@@ -55,7 +61,7 @@ namespace ContosoUniversity.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Create([Bind(Include = "CourseID,Title,Credits,DepartmentID")]Course course)
+        public ActionResult Create([Bind("CourseID,Title,Credits,DepartmentID")]Course course)
         {
             try
             {
@@ -79,12 +85,12 @@ namespace ContosoUniversity.Controllers
         {
             if (id == null)
             {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+                return new BadRequestResult();
             }
             Course course = db.Courses.Find(id);
             if (course == null)
             {
-                return HttpNotFound();
+                return new NotFoundResult();
             }
             PopulateDepartmentsDropDownList(course.DepartmentID);
             return View(course);
@@ -92,15 +98,14 @@ namespace ContosoUniversity.Controllers
 
         [HttpPost, ActionName("Edit")]
         [ValidateAntiForgeryToken]
-        public ActionResult EditPost(int? id)
+        public async Task<ActionResult> EditPost(int? id)
         {
             if (id == null)
             {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+                return BadRequest();
             }
             var courseToUpdate = db.Courses.Find(id);
-            if (TryUpdateModel(courseToUpdate, "",
-               new string[] { "Title", "Credits", "DepartmentID" }))
+            if (await TryUpdateModelAsync(courseToUpdate))
             {
                 try
                 {
@@ -132,12 +137,12 @@ namespace ContosoUniversity.Controllers
         {
             if (id == null)
             {
-                return new HttpStatusCodeResult(HttpStatusCode.BadRequest);
+                return new BadRequestResult();
             }
             Course course = db.Courses.Find(id);
             if (course == null)
             {
-                return HttpNotFound();
+                return new NotFoundResult();
             }
             return View(course);
         }
