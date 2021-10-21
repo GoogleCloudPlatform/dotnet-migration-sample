@@ -12,7 +12,7 @@ This tutorial provides end-to-end guidance on how to migrate the Contoso Univers
 * [Using .NET 5 Configuration](#Using-NET-5-Configuration)
 * [Deploying to Google Cloud](#Deploying-to-Google-Cloud)
 * [Using Google Secret Manager](#Using-Google-Secret-Manager)
-* [Adding Google Cloud Logging & Monitoring](#Adding-Cloud-Logging-and-Cloud-Monitoring)
+* [Adding Google Cloud Diagnostics](#Adding-Cloud-Diagnostics)
 * [Putting it all together](#Putting-it-all-together)
 
 ## Prerequisites
@@ -94,6 +94,18 @@ You are now ready to migrate to application from .NET Framework to .NET 5.
 If you want to first test the .NET Framework web application in a Windows container on GKE, refer to the [GKE tutorial](GKE.md).
 
 ## Migrate
+
+If you want to skip the steps for migrating the .NET Framework web application to a .NET 5 web application, and instead only deploy the fully migrated .NET 5 web application, perform the following four steps:
+1. Checkout the `main` branch:
+    ```bash
+    git checkout main 
+    ```
+1. Create a file named `appsettings.Development.json` in the `ContosoUniversity` folder 
+and copy the content from the `appsettings.json` file to the new file.
+
+1. [Add your connection string](#add-a-connection-string-to-appsettings) to the `appsettings.Development.json` file.
+
+1. Skip to [testing the .NET 5 version](#test-the-net-5-version). You don't need to make any code modifications or create any of the configuration files, as all the changes are already included in the `main` branch.
 
 In this section, you use the [.NET Upgrade Assistant](https://dotnet.microsoft.com/platform/upgrade-assistant/) to automate some steps of the migration to .NET 5. This will get you about 80% of the way there for this tutorial application. This automation is also a good starting point for most .NET Framework to .NET 5 upgrades. 
 
@@ -583,8 +595,8 @@ In this section, you use Cloud Run to mount the connection string to: `/app/secr
     
     NOTE: By default, Cloud Run revisions execute as the [Compute Engine default service account](https://cloud.google.com/compute/docs/access/service-accounts#default_service_account).
 
-## Adding Cloud Logging and Cloud Monitoring
-In this section, you centralize logging and monitoring. It's common for Cloud Native applications to adopt the [Twelve-Factor App](https://12factor.net/logs) pattern and treat logs as streams. ASP.NET Core by default [writes logs](https://docs.microsoft.com/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0) to `stdout` as desired. By default, all Cloud Run logs written to `stdout` by the container will be available in [Cloud Logging](https://cloud.google.com/logging). However, [structured logging](https://cloud.google.com/logging/docs/structured-logging) allows you to make more sense of the logs, and enables easier querying, with machine and human readability.
+## Adding Cloud Diagnostics
+In this section, you centralize logging and tracing. It's common for Cloud Native applications to adopt the [Twelve-Factor App](https://12factor.net/logs) pattern and treat logs as streams. ASP.NET Core by default [writes logs](https://docs.microsoft.com/aspnet/core/fundamentals/logging/?view=aspnetcore-5.0) to `stdout` as desired. By default, all Cloud Run logs written to `stdout` by the container will be available in [Cloud Logging](https://cloud.google.com/logging). However, [structured logging](https://cloud.google.com/logging/docs/structured-logging) allows you to make more sense of the logs, and enables easier querying, with machine and human readability.
 
 There are several ways to get ASP.NET to automatically structure the logs without changing your logging code. In this section you will enable structured logging using the `Google.Cloud.Diagnostics.AspNetCore` package.
 
