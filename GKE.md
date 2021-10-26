@@ -67,7 +67,7 @@ git clone https://github.com/GoogleCloudPlatform/dotnet-migration-sample
 cd dotnet-migration-sample 
 ```
 
-In this tutorial you create several files, such as a Docker file and a build instruction file for Cloud Build. If you want to skip the steps for creating the required files, checkout the `gke_windows` branch:
+In this tutorial you create several files, including a Docker file and a build instruction file for Cloud Build. If you want to skip the steps for creating the required files, checkout the `gke_windows` branch:
 ```bash
 git checkout gke_windows 
 ```
@@ -75,7 +75,7 @@ git checkout gke_windows
 ## Treat the connection string as a secret
 The database connection string contains sensitive information - the user's credentials. It's a security best practice to separate the sensitive information, also known as *secrets*, from the application. In GKE, the secrets for an application are stored in the cluster as a Kubernetes secret and are deployed to the container as either files or environment variables, together with the application. 
 
-1. To reference this secret with no code changes, replace the `connectionStrings` section in the `ContosoUniversity\Web.config` file with the following configuration (copy only the `connectionStrings` line from the below snippet): 
+1. To reference this secret with no code changes, replace the `connectionStrings` section in the `ContosoUniversity\Web.config` file with the following configuration (copy only the `connectionStrings` line from the following snippet): 
 
    ```xml
    <configuration>
@@ -105,7 +105,7 @@ The database connection string contains sensitive information - the user's crede
    kubectl create secret generic connection-strings --from-file=connectionStrings.config
    ```
 
-You will use the secret you created later on in this tutorial, when you create the deployment YAML file for the application.
+You use the secret you created later on in this tutorial, when you create the deployment YAML file for the application.
 
 ## Create the Windows Container image
 
@@ -139,7 +139,7 @@ The container image runs .NET Framework 4.8. Although the application was writte
 
 If you have Docker installed locally on your Windows Server 2019 machine and you want to test the container locally, see the guidance in this section. 
 
-If you do not want to test the container locally, skip this section and use [Cloud Build](#Using-Cloud-Build-to-build-Windows-container-images) for your test.  
+If you do not want to test the container locally, skip this section.
 
 1. In Cloud Shell, build the container:
 
