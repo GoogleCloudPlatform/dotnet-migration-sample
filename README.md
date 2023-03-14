@@ -30,7 +30,7 @@ This tutorial provides end-to-end guidance on how to migrate the Contoso Univers
 Either [download the original Microsoft sample](https://webpifeed.blob.core.windows.net/webpifeed/Partners/ASP.NET%20MVC%20Application%20Using%20Entity%20Framework%20Code%20First.zip) and unzip it to a local directory, or clone this repository and checkout the `start` tag:
 
 ```cmd
-git clone https://github.com/jjdelorme/ContosoUniversity
+git clone https://github.com/GoogleCloudPlatform/dotnet-migration-sample
 
 git checkout start
 ```
