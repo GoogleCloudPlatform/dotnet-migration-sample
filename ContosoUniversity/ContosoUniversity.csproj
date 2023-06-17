@@ -61,8 +61,8 @@
   <ItemGroup>
     <PackageReference Include="bootstrap" Version="3.4.1" />
     <PackageReference Include="BuildBundlerMinifier" Version="3.2.449" />
-    <PackageReference Include="jQuery" Version="1.10.2" />
-    <PackageReference Include="jQuery.Validation" Version="1.19.3" />
+    <PackageReference Include="jQuery" Version="3.7.0" />
+    <PackageReference Include="jQuery.Validation" Version="1.19.5" />
     <PackageReference Include="Microsoft.jQuery.Unobtrusive.Validation" Version="3.2.0" />
     <PackageReference Include="Modernizr" Version="2.6.2" />
     <PackageReference Include="PagedList.Core.Mvc" Version="3.0.0" />

@@ -187,6 +187,12 @@ To use ASP.NET Core, you must remove all the files from the `ContosoUniversity\A
             ]
         },
         {
+            "outputFileName": "wwwroot/js/jqueryval.js",
+            "inputFiles": [
+                "Scripts/jquery.validate.js"
+            ]
+        },
+        {
             "outputFileName": "wwwroot/js/bs-bundle.js",
             "inputFiles": [
                 "Scripts/bootstrap.js",

@@ -12,6 +12,12 @@
 		  "Scripts/jquery-1.10.2.intellisense.js"
 		]
 	},
+    {
+		"outputFileName": "wwwroot/js/jqueryval.js",
+		"inputFiles": [
+		  "Scripts/jquery.validate.js"
+		]
+	},
 	{
 		"outputFileName": "wwwroot/js/bs-bundle.js",
 		"inputFiles": [
