@@ -7,31 +7,31 @@ This tutorial shows you how to replatform the Contoso University web application
 In [Cloud Shell](https://shell.cloud.google.com), run the following command:
 
 ```bash
-gcloud services enable container.googleapis.com containerregistry.googleapis.com run.googleapis.com compute.googleapis.com cloudbuild.googleapis.com
+gcloud services enable container.googleapis.com artifactregistry.googleapis.com compute.googleapis.com cloudbuild.googleapis.com servicenetworking.googleapis.com
 ```
 
 This command enables the following APIs in your project:
 
+- Service Networking
 - Cloud Build
 - GKE
-- Container Registry
+- Artifact Registry
 - Compute Engine
-- Cloud Build 
-
+- Cloud Build
 
 ## Setup Cloud SQL for SQL Server
 
-If you haven't done so already, [create](./README.md#Setup-Cloud-SQL-for-SQL-Server) a Cloud SQL for SQL Server instance to host the Contoso University database.
+If you haven't done so already, [create](./README.md#Setup-Cloud-SQL-for-SQL-Server) a Cloud SQL for SQL Server instance to host the Contoso University database, and follow the [steps in the README file](README.md#connect-to-the-database) to create and populate the ContosoUniversity database. 
 
 ### Configure private IP for Cloud SQL for SQL Server
 
-GKE uses cluster auto-scaling, meaning that under load your cluster may add new nodes to the cluster. New nodes are added with new external IPs, which makes it hard to keep your authorized networks in Cloud SQL up-to-date. To  allow traffic from GKE nodes to your Cloud SQL instance, we recommended that you enable private IP for your Cloud SQL instance.
+GKE uses cluster auto-scaling, meaning that under load your cluster may add new nodes to the cluster. New nodes are added with new external IPs, which makes it hard to keep your authorized networks in Cloud SQL up-to-date. To allow traffic from GKE nodes to your Cloud SQL instance, we recommended that you enable private IP for your Cloud SQL instance.
 
 If you haven't done so already, configure a private IP for your Cloud SQL instance. To learn how to do this, see [Configuring Private IP](https://cloud.google.com/sql/docs/sqlserver/configure-private-ip). Note the private IP of the instance, because you use it later in this tutorial. 
 
 ## Create the GKE cluster
 
-In Cloud Shell, create a GKE cluster with a Windows Server node pool:
+In Cloud Shell, create a GKE cluster with a Windows Server 2019 node pool:
 
 ```bash
 export CLUSTER_NAME=cluster1
@@ -42,9 +42,10 @@ gcloud container clusters create $CLUSTER_NAME \
     --zone=us-central1-a \
     --release-channel regular
 
-gcloud container node-pools create windows-ltsc-pool \
+gcloud container node-pools create windows-2019-ltsc-pool \
     --cluster=$CLUSTER_NAME \
-    --image-type=WINDOWS_LTSC \
+    --image-type=WINDOWS_LTSC_CONTAINERD \
+    --windows-os-version=ltsc2019 \
     --no-enable-autoupgrade \
     --zone=us-central1-a \
     --machine-type=n1-standard-2 \
@@ -57,12 +58,12 @@ For more information about Windows Server node pools in GKE, see [Creating a clu
 
 If you plan on building and running the container locally, execute the following commands in a Windows Server 2019 machine that has [Docker](https://cloud.google.com/compute/docs/containers#install_docker) and [git](https://git-scm.com/download/win) installed. 
 
-Alternatively, if you want to build the container image with Cloud Build, stay in Cloud shell.
+Alternatively, if you want to build the container image with Cloud Build, stay in Cloud Shell.
 
 Run the following command to download the code that you use in this tutorial:
 
 ```bash
-git clone https://github.com/GoogleCloudPlatform/dotnet-migration-sample
+git clone --branch start https://github.com/GoogleCloudPlatform/dotnet-migration-sample
 
 cd dotnet-migration-sample 
 ```
@@ -107,9 +108,13 @@ The database connection string contains sensitive information - the user's crede
 
 You use the secret you created later on in this tutorial, when you create the deployment YAML file for the application.
 
+## Create a Docker registry
+
+If you haven't done so already, [create an Artifact Registry repository for Docker](https://cloud.google.com/artifact-registry/docs/repositories/create-repos#docker) in `us-central1` and name it `images`. 
+
 ## Create the Windows Container image
 
-To deploy the web application to GKE, you need to create a [Dockerfile](https://docs.docker.com/engine/reference/builder/) that describes how to build the application with MSBuild and how to create the container image, and then build the container image and push it to a container repository.
+To deploy the web application to GKE, you need to create a [Dockerfile](https://docs.docker.com/engine/reference/builder/) that describes how to build the application with MSBuild and how to create the container image, and then build the container image and push it to Artifact Registry.
 
 ### Create the Dockerfile
 Create a file named `Dockerfile` in the same folder as the `ContosoUniversity.sln` file and set its content:
@@ -119,7 +124,8 @@ Create a file named `Dockerfile` in the same folder as the `ContosoUniversity.sl
 
 FROM mcr.microsoft.com/dotnet/framework/sdk:4.8-windowsservercore-ltsc2019 AS build
 WORKDIR /source
-COPY . /source
+COPY ContosoUniversity.sln /source
+COPY ContosoUniversity /source/ContosoUniversity
 
 RUN msbuild ContosoUniversity.sln /t:restore /p:RestorePackagesConfig=true
 RUN msbuild /p:Configuration=Release `
@@ -133,7 +139,7 @@ COPY --from=build /deploy /inetpub/wwwroot
 EXPOSE 80
 ```
 
-The container image runs .NET Framework 4.8. Although the application was written for .NET Framework 4.5, because of the backward compatiblity of the .NET Framework's, the container will still be able to run the application.
+The container image runs .NET Framework 4.8. Although the application was written for .NET Framework 4.5, because of the backward compatiblity of .NET Framework, the container will still be able to run the application.
 
 ### Optional: Build and test the container locally
 
@@ -141,7 +147,7 @@ If you have Docker installed locally on your Windows Server 2019 machine and you
 
 If you do not want to test the container locally, skip this section.
 
-1. In Cloud Shell, build the container:
+1. In your machine, build the container:
 
    ```cmd
    # GKE is not used - Copy the connectionStrings.config file to the secret folder
@@ -152,22 +158,21 @@ If you do not want to test the container locally, skip this section.
    gcloud info --format=value(config.project) > __project && set /p PROJECT= < __project && del __project
 
    # Build the container
-   docker build -t gcr.io/%PROJECT%/contosouniversity-windows:v1 -f Dockerfile .
+   docker build -t us-central1-docker.pkg.dev/%PROJECT%/images/contosouniversity-windows:v1 -f Dockerfile .
 
    # Run the container
-   docker run -it --rm -p 8080:80 -v "%cd%\secret:c:\inetpub\wwwroot\secret" --name contoso-university gcr.io/%PROJECT%/contosouniversity-windows:v1
+   docker run -it --rm -p 8080:80 -v "%cd%\secret:c:\inetpub\wwwroot\secret" --name contoso-university us-central1-docker.pkg.dev/%PROJECT%/images/contosouniversity-windows:v1
    ```
-
 
    You should now be able to launch a browser with [http://localhost:8080](http://localhost:8080) to see the application.
 
 1. Register gcloud as a Docker credential helper:
    ```cmd
-   gcloud auth configure-docker
+   gcloud auth configure-docker us-central1-docker.pkg.dev
    ```
 1. Push the container to your private container registry:
    ```cmd
-   docker push gcr.io/%PROJECT%/contosouniversity-windows:v1
+   docker push us-central1-docker.pkg.dev/%PROJECT%/images/contosouniversity-windows:v1
    ```
 
 ## Use Cloud Build to build Windows container images
@@ -176,7 +181,7 @@ Cloud Build workers are Linux-based and therefore do not support the build of .N
 
 1. Use Cloud Build workers to run a script that creates a Windows Server VM with the .NET Framework SDK.
 1. Copy the code to the VM.
-1. Run `docker build` locally to build the container image.
+1. Run `docker build` in the VM to build the container image.
 1. Push the container image to your private container registry.
 
 These build steps are available by using the [gke-windows-builder](https://cloud.google.com/kubernetes-engine/docs/tutorials/building-windows-multi-arch-images) builder for Cloud Build. 
@@ -188,26 +193,36 @@ NOTE: The `gke-windows-builder` is not specific to GKE. Although built by the GK
 1. In Cloud Shell, run the following commands to let the Cloud Build service account access to your project:
 
    ```bash
-   export PROJECT=[PROJECT]
-   gcloud config set project $PROJECT
+   export PROJECT_ID=[PROJECT]
+   export PROJECT_NUMBER=`gcloud projects describe $PROJECT_ID --format 'value(projectNumber)'`
+   gcloud config set project $PROJECT_ID
 
-   export CLOUD_BUILD_SA=$(gcloud projects describe $PROJECT --format 'value(projectNumber)')@cloudbuild.gserviceaccount.com
+   export CLOUD_BUILD_SA=$PROJECT_NUMBER@cloudbuild.gserviceaccount.com
+   export COMPUTE_SA=$PROJECT_NUMBER-compute@developer.gserviceaccount.com
 
-   gcloud projects add-iam-policy-binding $PROJECT \
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
       --member=serviceAccount:$CLOUD_BUILD_SA \
       --role='roles/compute.instanceAdmin'
 
-   gcloud projects add-iam-policy-binding $PROJECT \
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
       --member=serviceAccount:$CLOUD_BUILD_SA \
       --role='roles/iam.serviceAccountUser'
 
-   gcloud projects add-iam-policy-binding $PROJECT \
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
       --member=serviceAccount:$CLOUD_BUILD_SA \
       --role='roles/compute.networkViewer'
 
-   gcloud projects add-iam-policy-binding $PROJECT \
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
       --member=serviceAccount:$CLOUD_BUILD_SA \
       --role='roles/storage.admin'
+
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
+      --member=serviceAccount:$COMPUTE_SA \
+      --role='roles/storage.admin'
+
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
+      --member=serviceAccount:$COMPUTE_SA \
+      --role='roles/artifactregistry.writer'
 
    gcloud compute firewall-rules create allow-winrm-ingress \
       --allow=tcp:5986 \
@@ -221,20 +236,26 @@ NOTE: The `gke-windows-builder` is not specific to GKE. Although built by the GK
    ```yaml
    timeout: 3600s
    steps:
-   - name: 'gcr.io/gke-release/gke-windows-builder:release-2.6.1-gke.0'
+   - name: 'us-docker.pkg.dev/gke-windows-tools/docker-repo/gke-windows-builder:latest'
      args:
      - --versions
      - 'ltsc2019'
      - --container-image-name
-     - 'gcr.io/$PROJECT_ID/contosouniversity-windows:v1'
-   ```  
+     - 'us-central1-docker.pkg.dev/$PROJECT_ID/images/contosouniversity-windows:v1'
+   ```
+
+1. Delete the `connectionStrings.config` file.
+
+  ```bash
+  rm connectionStrings.config
+  ```
 
 1. Use Cloud Build to build the Windows Server container image and push the image to Container Registry:
 
    ```bash
    gcloud builds submit
    ```
-   
+
 ## Deploy to GKE
 Now that the container image is ready, you can create the deployment in GKE and test the web application to verify it is working and able to query the SQL Server database.
 
@@ -258,13 +279,13 @@ Now that the container image is ready, you can create the deployment in GKE and 
            app: contosouniversity
        spec:
          containers:
-         - image: gcr.io/${PROJECT}/contosouniversity-windows:v1
+         - image: us-central1-docker.pkg.dev/${PROJECT_ID}/images/contosouniversity-windows:v1
            imagePullPolicy: IfNotPresent
            name: contosouniversity-container
            volumeMounts: 
            - name: connection-strings
              mountPath: "/inetpub/wwwroot/secret"
-             readOnly: true        
+             readOnly: true
            ports:
            - containerPort: 80
              protocol: TCP
@@ -299,12 +320,34 @@ Now that the container image is ready, you can create the deployment in GKE and 
    envsubst < deploy.yaml | kubectl apply -f -
    ```
 
+   The script uses the `envsubst` tool to substitute `${PROJECT_ID}` in the `deploy.yaml` file with your project ID. The output of that script is applied to your GKE cluster. 
 
-   The script uses the `envsubst` tool to substitute `${PROJECT}` in the `deploy.yaml` file with your project ID. The output of that script is applied to your GKE cluster. 
-   
    You can see the relevant placeholder in the following `deploy.yaml` file:
 
    ```yaml
-         containers:
-         - image: gcr.io/${PROJECT}/contosouniversity-windows:v1
+   containers:
+   - image: us-central1-docker.pkg.dev/${PROJECT_ID}/images/contosouniversity-windows:v1
    ```
+
+1. Wait for the pod to show as `RUNNING`:
+   ```bash
+   watch kubectl get pods
+   ```
+
+   Kubernetes copies the application's container image to the Windows Server node. The container image is several GBs, and this process can take several minutes to finish. 
+
+1. Run the following command to get the IP address for the deployment:
+   ```bash
+   kubectl get svc contosouniversity-service -o=jsonpath="{.status.loadBalancer.ingress[0].ip}"
+   ```
+
+## Test the application
+Confirm the application functions as desired.
+
+1. Browse to `http://[SERVICE-IP]`. Replace `[SERVICE-IP]` with the IP of the service you previously retrieved.
+
+1. Verify you see the following home page:
+
+   ![Home Page](./_figures/homepage.png)
+
+1. Verify the application can access the database by selecting one of the tabs, for example, **Departments**.
