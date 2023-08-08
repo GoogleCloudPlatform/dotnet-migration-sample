@@ -1,8 +1,8 @@
 timeout: 3600s
 steps:
-- name: 'gcr.io/gke-release/gke-windows-builder:release-2.6.1-gke.0'
+- name: 'us-docker.pkg.dev/gke-windows-tools/docker-repo/gke-windows-builder:latest'
   args:
   - --versions
   - 'ltsc2019'
   - --container-image-name
-  - 'gcr.io/$PROJECT_ID/contosouniversity-windows:v1'
+  - 'us-central1-docker.pkg.dev/${PROJECT_ID}/images/contosouniversity-windows:v1'
